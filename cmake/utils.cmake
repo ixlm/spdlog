@@ -19,6 +19,7 @@ function(spdlog_extract_version)
 	endif()
 	set(ver_patch ${CMAKE_MATCH_1})
 
+    set(SPDLOG_VERSION_MAJOR ${ver_major} PARENT_SCOPE)
 	set (SPDLOG_VERSION "${ver_major}.${ver_minor}.${ver_patch}" PARENT_SCOPE)
 endfunction()
 
@@ -28,7 +29,10 @@ function(spdlog_enable_warnings target_name)
     target_compile_options(${target_name} PRIVATE
         $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
             -Wall -Wextra -Wconversion -pedantic -Wfatal-errors>
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>)
+        $<$<CXX_COMPILER_ID:MSVC>:/W4>)
+		if(MSVC_VERSION GREATER  1900)  #Allow non fatal security wanrnings for msvc 2015
+			target_compile_options(${target_name} PRIVATE /WX)
+		endif()
 endfunction()
 
 

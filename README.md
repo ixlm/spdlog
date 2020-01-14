@@ -6,18 +6,16 @@ Very fast, header-only/compiled, C++ logging library. [![Build Status](https://t
 
 ## Install 
 #### Header only version
-* Copy the source [folder](https://github.com/gabime/spdlog/tree/v1.x/include/spdlog) to your build tree and use a C++11 compiler.
+Copy the source [folder](https://github.com/gabime/spdlog/tree/v1.x/include/spdlog) to your build tree and use a C++11 compiler.
 
-#### Static lib version (recommended - much faster compile times, v1.4.0)
-* Copy [src/spdlog.cpp](https://github.com/gabime/spdlog/blob/v1.x/src/spdlog.cpp) to your build tree and pass the `-DSPDLOG_COMPILED_LIB` to the compiler.
-* Or use **CMake** to build:
-
-      $ git clone https://github.com/gabime/spdlog.git
-      $ cd spdlog && mkdir build && cd build
-      $ cmake .. && make -j
+#### Static lib version (recommended - much faster compile times)
+```console
+$ git clone https://github.com/gabime/spdlog.git
+$ cd spdlog && mkdir build && cd build
+$ cmake .. && make -j
+```
       
    see example [CMakeLists.txt](https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt) on how to use.
-
 
 ## Platforms
  * Linux, FreeBSD, OpenBSD, Solaris, AIX
@@ -27,16 +25,20 @@ Very fast, header-only/compiled, C++ logging library. [![Build Status](https://t
 
 ## Package managers:
 * Homebrew: `brew install spdlog`
+* MacPorts: `sudo port install spdlog`
 * FreeBSD:  `cd /usr/ports/devel/spdlog/ && make install clean`
 * Fedora: `yum install spdlog`
 * Gentoo: `emerge dev-libs/spdlog`
 * Arch Linux: `yaourt -S spdlog-git`
 * vcpkg: `vcpkg install spdlog`
+* conan: `spdlog/[>=1.4.1]`
+
 
 ## Features
 * Very fast (see [benchmarks](#benchmarks) below).
 * Headers only, just copy and use. Or use as a compiled library.
 * Feature rich formatting, using the excellent [fmt](https://github.com/fmtlib/fmt) library.
+* **New!** [Backtrace](#backtrace-support) support - store debug messages in a ring buffer and display later on demand.
 * Fast asynchronous mode (optional)
 * [Custom](https://github.com/gabime/spdlog/wiki/3.-Custom-formatting) formatting.
 * Multi/Single threaded loggers.
@@ -76,7 +78,7 @@ int main()
     
     // Compile time log levels
     // define SPDLOG_ACTIVE_LEVEL to desired level
-    SPDLOG_TRACE("Some trace message with param {}", {});
+    SPDLOG_TRACE("Some trace message with param {}", 42);
     SPDLOG_DEBUG("Some debug message");
     
     // Set the default logger to file logger
@@ -137,22 +139,27 @@ void daily_example()
 ```
 
 ---
-#### Cloning loggers 
+#### Backtrace support
 ```c++
-// clone a logger and give it new name.
-// Useful for creating subsystem loggers from some "root" logger
-void clone_example()
+// Loggers can store in a ring buffer all messages (including debug/trace) and display later on demand.
+// When needed, call dump_backtrace() to see them
+spdlog::enable_backtrace(32); // create ring buffer with capacity of 32  messages
+// or my_logger->enable_backtrace(32)..
+for(int i = 0; i < 100; i++)
 {
-    auto network_logger = spdlog::get("root")->clone("network");
-    network_logger->info("Logging network stuff..");
+  spdlog::debug("Backtrace message {}", i); // not logged yet..
 }
+// e.g. if some error happened:
+spdlog::dump_backtrace(); // log them now! show the last 32 messages
+
+// or my_logger->dump_backtrace(32)..
 ```
 
 ---
 #### Periodic flush
 ```c++
 // periodically flush all *registered* loggers every 3 seconds:
-// warning: only use if all your loggers are thread safe!
+// warning: only use if all your loggers are thread safe ("_mt" loggers)
 spdlog::flush_every(std::chrono::seconds(3));
 
 ```
@@ -315,7 +322,7 @@ Below are some [benchmarks](https://github.com/gabime/spdlog/blob/v1.x/bench/ben
 [info] daily_st         Elapsed: 0.42 secs        2,393,298/sec
 [info] null_st          Elapsed: 0.04 secs       27,446,957/sec
 [info] **************************************************************
-[info] 10 threads sharing same logger, 1,000,000 iterations
+[info] 10 threads, competing over the same logger object, 1,000,000 iterations
 [info] **************************************************************
 [info] basic_mt         Elapsed: 0.60 secs        1,659,613/sec
 [info] rotating_mt      Elapsed: 0.62 secs        1,612,493/sec
@@ -329,7 +336,6 @@ Below are some [benchmarks](https://github.com/gabime/spdlog/blob/v1.x/bench/ben
 [info] Threads      : 10
 [info] Queue        : 8,192 slots
 [info] Queue memory : 8,192 x 272 = 2,176 KB 
-[info] Total iters  : 3
 [info] -------------------------------------------------
 [info] 
 [info] *********************************
